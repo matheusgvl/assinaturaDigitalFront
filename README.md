@@ -38,13 +38,24 @@ O cliente HTTP usa `VITE_API_BASE_URL` e `VITE_API_TIMEOUT_MS`, com `withCredent
 
 Falhas de login usam mensagem genérica e não permitem enumeração de usuários. Respostas HTTP 429 e 423, `Retry-After`, indisponibilidade de rede e falhas temporárias têm feedback visual dedicado. O frontend não executa tentativas automáticas, não cria contadores locais e não persiste senha ou tokens.
 
+## Passkeys e TOTP
+
+As telas `/passkeys`, `/login` (opção de passkey), `/security/totp`, `/login/totp` e `/security/recovery-codes` preparam os fluxos de autenticação forte.
+
+- Passkeys usam `@simplewebauthn/browser`; o desafio vem do backend e a confirmação só é exibida após a resposta do servidor. WebAuthn exige HTTPS ou `localhost`.
+- O TOTP recebe do backend o QR Code, envia o código de seis dígitos para confirmação e não gera ou persiste o segredo no navegador.
+- O desafio TOTP do login deve ser iniciado pelo backend com um identificador de transação pré-autenticação; nenhum token é criado pelo frontend antes da validação completa.
+- Códigos de recuperação são apenas exibidos quando fornecidos pelo backend, podem ser copiados ou baixados localmente e não são persistidos.
+
+Os endpoints atuais são provisórios: `/auth/passkeys/registration/options`, `/auth/passkeys/registration/verify`, `/auth/passkeys/authentication/options`, `/auth/passkeys/authentication/verify`, `/auth/totp/setup`, `/auth/totp/setup/confirm` e `/auth/totp/login/verify`. O backend ainda precisa definir os contratos definitivos, validar desafios, origem/RP ID, assinaturas, contadores, segredo TOTP, janela temporal, hashes dos códigos, rate limiting e emissão segura da sessão.
+
 ## Estrutura e arquitetura
 
 `src/app` configura a aplicação e o roteador; `src/components/layout` contém layouts compartilhados; `src/pages` contém páginas; `src/services/api.ts` centraliza o cliente HTTP; `src/styles` contém estilos globais. O frontend comunica-se exclusivamente com a API REST e não acessa PostgreSQL.
 
 ## Segurança e status
 
-Implementados: base responsiva, navegação, formulários de cadastro/login, validação orientativa de senha, feedback de erros de autenticação, cliente Axios com timeout e cookies HttpOnly. Pendentes no backend: hash e política efetiva de senhas, autenticação, JWT/sessões, rate limiting por IP/conta, bloqueio temporário, TOTP/passkeys, proteção real de rotas e contrato definitivo dos endpoints. Nenhum documento, token fictício ou credencial é usado nesta etapa.
+Implementados: base responsiva, navegação, formulários de cadastro/login, passkeys via WebAuthn, telas TOTP e recuperação, validação orientativa de senha, feedback de erros de autenticação, cliente Axios com timeout e cookies HttpOnly. Pendentes no backend: hash e política efetiva de senhas, autenticação, JWT/sessões, rate limiting por IP/conta, bloqueio temporário, validação criptográfica WebAuthn, geração/validação TOTP, proteção real de rotas e contrato definitivo dos endpoints. Nenhum documento, token fictício ou credencial é usado nesta etapa.
 
 ## Validação
 
