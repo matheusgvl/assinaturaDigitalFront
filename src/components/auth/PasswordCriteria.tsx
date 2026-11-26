@@ -1,0 +1,3 @@
+import type { PasswordCriteria as Criteria } from '../../utils/password-validation';
+const labels: Array<[keyof Criteria, string]> = [['minLength', '12 caracteres ou mais'], ['uppercase', 'Uma letra maiúscula'], ['lowercase', 'Uma letra minúscula'], ['number', 'Um número'], ['symbol', 'Um símbolo']];
+export function PasswordCriteria({ criteria }: { criteria: Criteria }) { return <ul className="password-criteria" aria-label="Critérios de senha">{labels.map(([key, label]) => <li key={key} className={criteria[key] ? 'criterion-met' : ''}><span aria-hidden="true">{criteria[key] ? '✓' : '○'}</span>{label}<span className="sr-only">{criteria[key] ? ' atendido' : ' não atendido'}</span></li>)}</ul>; }
