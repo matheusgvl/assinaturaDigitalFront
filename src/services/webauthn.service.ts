@@ -1,0 +1,3 @@
+import { api } from './api'; import type { WebAuthnCreationOptions, WebAuthnRequestOptions, WebAuthnResult } from '../types/webauthn';
+// These paths are provisional until the backend publishes its WebAuthn contract.
+export const webauthnService = { requestRegistrationOptions: () => api.post<WebAuthnCreationOptions>('/auth/passkeys/registration/options'), confirmRegistration: (credential: unknown) => api.post<WebAuthnResult>('/auth/passkeys/registration/verify', credential), requestAuthenticationOptions: () => api.post<WebAuthnRequestOptions>('/auth/passkeys/authentication/options'), confirmAuthentication: (credential: unknown) => api.post<WebAuthnResult>('/auth/passkeys/authentication/verify', credential) };

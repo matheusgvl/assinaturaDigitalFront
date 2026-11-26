@@ -1,0 +1,3 @@
+export type WebAuthnCreationOptions = { challenge: string; rp: { name: string; id?: string }; user: { id: string; name: string; displayName: string }; pubKeyCredParams: Array<{ type: 'public-key'; alg: number }>; timeout?: number; excludeCredentials?: Array<{ type: 'public-key'; id: string; transports?: string[] }>; authenticatorSelection?: Record<string, unknown> };
+export type WebAuthnRequestOptions = { challenge: string; timeout?: number; rpId?: string; allowCredentials?: Array<{ type: 'public-key'; id: string; transports?: string[] }>; userVerification?: 'required' | 'preferred' | 'discouraged' };
+export type WebAuthnResult = { confirmed: boolean; user?: { id: string; name: string } };
