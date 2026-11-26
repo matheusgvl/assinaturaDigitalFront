@@ -22,9 +22,13 @@ Variáveis públicas: `VITE_API_BASE_URL` e `VITE_API_TIMEOUT_MS`. Não coloque 
 
 `npm run dev`, `npm run build`, `npm run preview`, `npm run lint`, `npm run typecheck` e `npm run test`.
 
-## Rotas
+## Rotas e layout
 
-`/` inicial; `/login` login pendente; `/register` cadastro pendente; `/dashboard` painel pendente; `/sign` assinatura pendente; `/verify` verificação pública pendente; qualquer outra rota exibe 404.
+`/` inicial; `/login` login pendente; `/register` cadastro pendente; `/dashboard` painel pendente; `/sign` assinatura pendente; `/verify` verificação pública pendente; qualquer outra rota exibe 404. As rotas públicas usam `PublicLayout`; as rotas internas ficam agrupadas em `AppLayout`, prontas para receber um guard de autenticação futuro sem simular proteção hoje.
+
+O layout interno possui `Header` e `Sidebar` responsivos. Em telas pequenas, o menu lateral abre por botão com `aria-expanded`, fecha ao navegar e mantém foco visível. A navegação usa `NavLink` para indicar a rota ativa sem recarregar a aplicação.
+
+Componentes compartilhados em `src/components/ui.tsx`: `Button`, `Card`, `Input`, `Label`, `PageHeader`, `Badge`, `Alert` e `Container`. Estados em `src/components/feedback.tsx`: `LoadingSpinner`, `LoadingState`, `ErrorState` e `EmptyState`.
 
 ## Estrutura e arquitetura
 
@@ -36,4 +40,4 @@ Implementados: base responsiva, navegação, estados informativos, cliente Axios
 
 ## Validação
 
-Execute `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` e `npm audit --omit=dev` antes de publicar alterações.
+Execute `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` e `npm audit --omit=dev` antes de publicar alterações. Os testes cobrem rotas, indicação ativa, estados de feedback, renderização e foco por teclado.
