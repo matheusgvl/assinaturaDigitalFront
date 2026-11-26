@@ -35,7 +35,7 @@ test('does not persist the file in browser storage', async () => {
 });
 
 test('sends file, page and coordinates only after the seal is placed', async () => {
-  const sign = vi.spyOn(signatureService, 'sign').mockResolvedValue({ data: new Blob() } as AxiosResponse<Blob>);
+  const sign = vi.spyOn(signatureService, 'sign').mockResolvedValue({ data: new Blob(['%PDF-1.7 signed']) } as AxiosResponse<Blob>);
   const file = validPdf();
   choose(file);
   const submit = await screen.findByRole('button', { name: 'Assinar documento' });
@@ -43,5 +43,23 @@ test('sends file, page and coordinates only after the seal is placed', async () 
   fireEvent.click(screen.getByRole('button', { name: 'Posicionar selo' }));
   expect(screen.getByText('Página 2, X 100 pt, Y 150 pt')).toBeTruthy();
   fireEvent.click(submit);
-  await waitFor(() => expect(sign).toHaveBeenCalledWith(file, { page: 2, x: 100, y: 150 }));
+  await waitFor(() => expect(sign).toHaveBeenCalledWith(file, { page: 2, x: 100, y: 150 }, expect.any(Function)));
+});
+
+test('offers the signed PDF for download after success', async () => {
+  vi.spyOn(signatureService, 'sign').mockResolvedValue({ data: new Blob(['%PDF-1.7 signed']) } as AxiosResponse<Blob>);
+  choose(validPdf());
+  fireEvent.click(await screen.findByRole('button', { name: 'Posicionar selo' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Assinar documento' }));
+  expect(await screen.findByRole('button', { name: /baixar pdf assinado/i })).toBeTruthy();
+  expect(screen.getByText('contrato-assinado.pdf')).toBeTruthy();
+});
+
+test('refuses to offer a non-PDF server response as the signed file', async () => {
+  vi.spyOn(signatureService, 'sign').mockResolvedValue({ data: new Blob(['{"error":"x"}']) } as AxiosResponse<Blob>);
+  choose(validPdf());
+  fireEvent.click(await screen.findByRole('button', { name: 'Posicionar selo' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Assinar documento' }));
+  expect(await screen.findByText(/não devolveu um pdf assinado válido/i)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /baixar/i })).toBeNull();
 });
