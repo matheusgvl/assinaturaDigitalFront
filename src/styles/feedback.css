@@ -1,0 +1,1 @@
+.feedback{display:flex;align-items:center;justify-content:center;gap:10px;padding:32px;color:#58657a}.spinner{width:18px;height:18px;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.feedback-card{margin:24px 0}.empty-state{text-align:center}.empty-state p{color:#58657a}
