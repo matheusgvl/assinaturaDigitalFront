@@ -30,13 +30,21 @@ O layout interno possui `Header` e `Sidebar` responsivos. Em telas pequenas, o m
 
 Componentes compartilhados em `src/components/ui.tsx`: `Button`, `Card`, `Input`, `Label`, `PageHeader`, `Badge`, `Alert` e `Container`. Estados em `src/components/feedback.tsx`: `LoadingSpinner`, `LoadingState`, `ErrorState` e `EmptyState`.
 
+## Cadastro e login
+
+As rotas `/register` e `/login` possuem formulários responsivos com labels associados, autocomplete, validação de e-mail, mostrar/ocultar senha e estados acessíveis. A senha exige pelo menos 12 caracteres, uma letra maiúscula, uma minúscula, um número e um símbolo, além de confirmação idêntica.
+
+O cliente HTTP usa `VITE_API_BASE_URL` e `VITE_API_TIMEOUT_MS`, com `withCredentials` preparado para cookies HttpOnly. O serviço `src/services/auth.service.ts` usa provisoriamente `POST /auth/register` e `POST /auth/login`; esses caminhos e os formatos definitivos devem ser confirmados pelo contrato do backend.
+
+Falhas de login usam mensagem genérica e não permitem enumeração de usuários. Respostas HTTP 429 e 423, `Retry-After`, indisponibilidade de rede e falhas temporárias têm feedback visual dedicado. O frontend não executa tentativas automáticas, não cria contadores locais e não persiste senha ou tokens.
+
 ## Estrutura e arquitetura
 
 `src/app` configura a aplicação e o roteador; `src/components/layout` contém layouts compartilhados; `src/pages` contém páginas; `src/services/api.ts` centraliza o cliente HTTP; `src/styles` contém estilos globais. O frontend comunica-se exclusivamente com a API REST e não acessa PostgreSQL.
 
 ## Segurança e status
 
-Implementados: base responsiva, navegação, estados informativos, cliente Axios com timeout, credenciais para refresh cookie e suporte futuro ao header Authorization. Pendentes: identidade (JWT/passkeys/TOTP), proteção real de rotas, upload/visualização, assinatura criptográfica, verificação e integração dos endpoints. Nenhum documento, token fictício ou credencial é usado nesta etapa.
+Implementados: base responsiva, navegação, formulários de cadastro/login, validação orientativa de senha, feedback de erros de autenticação, cliente Axios com timeout e cookies HttpOnly. Pendentes no backend: hash e política efetiva de senhas, autenticação, JWT/sessões, rate limiting por IP/conta, bloqueio temporário, TOTP/passkeys, proteção real de rotas e contrato definitivo dos endpoints. Nenhum documento, token fictício ou credencial é usado nesta etapa.
 
 ## Validação
 
