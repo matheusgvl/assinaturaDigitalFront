@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+
+:root{--font-body:'DM Sans',system-ui,sans-serif;--font-display:'Manrope','DM Sans',system-ui,sans-serif}
+body{font-family:var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,h4,.brand{font-family:var(--font-display);font-weight:700;letter-spacing:-.035em}
+.brand{letter-spacing:-.055em}
+.landing h1{font-weight:800;letter-spacing:-.065em;line-height:.99}
+.landing .lead{font-weight:400;letter-spacing:-.012em;color:#52617a}
+.eyebrow{font-weight:700;font-size:11px;letter-spacing:.14em;line-height:1.4}
+.button{letter-spacing:-.01em}
+.hero-panel h2{letter-spacing:-.04em}
+.landing-strip strong{letter-spacing:-.015em}
+@media(max-width:480px){.landing h1{letter-spacing:-.055em;line-height:1.02}.landing .lead{line-height:1.55}}
