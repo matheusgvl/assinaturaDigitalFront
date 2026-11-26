@@ -1,1 +1,1 @@
-import { RouterProvider } from 'react-router-dom'; import { router } from './router'; export function App() { return <RouterProvider router={router} />; }
+import { RouterProvider } from 'react-router-dom'; import { router } from './router'; import { SessionProvider } from './session'; export function App() { return <SessionProvider><RouterProvider router={router} /></SessionProvider>; }
