@@ -1,0 +1,3 @@
+import { render, screen } from '@testing-library/react'; import { MemoryRouter } from 'react-router-dom'; import { expect, test } from 'vitest'; import { HomePage, NotFoundPage } from '../pages/Pages';
+test('renders the home purpose and actions', () => { render(<MemoryRouter><HomePage /></MemoryRouter>); expect(screen.getByText(/Documentos confiáveis/i)).toBeTruthy(); expect(screen.getByRole('link', { name: /verificar documento/i })).toBeTruthy(); });
+test('renders the 404 page', () => { render(<MemoryRouter><NotFoundPage /></MemoryRouter>); expect(screen.getByText(/página não encontrada/i)).toBeTruthy(); });
