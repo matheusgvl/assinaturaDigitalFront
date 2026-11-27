@@ -31,11 +31,13 @@ export function SignDocumentPage() {
 
   const [uploadKey, setUploadKey] = useState(0);
 
+  // Trocar o arquivo invalida a posicao e qualquer resultado anterior.
   function choose(next: File | null) { setFile(next); setSeal(null); setState({ kind: 'idle' }); }
   function reset() { choose(null); setUploadKey(key => key + 1); } // remount clears the file input
-  // Moving the seal invalidates a previous result; ignored while a request is in flight.
+  // Mover o selo invalida o resultado anterior; durante o envio a posicao fica congelada.
   function placeSeal(next: SealPosition) { if (state.kind === 'sending') return; setSeal(next); setState({ kind: 'idle' }); }
 
+  /** Envia o PDF e as coordenadas para a assinatura CMS/RSA real no backend. */
   async function sign() {
     if (!file || !seal || state.kind === 'sending') return;
     setState({ kind: 'sending', progress: 0 });

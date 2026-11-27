@@ -8,11 +8,13 @@ export type SealPosition = { page: number; x: number; y: number };
 
 const clamp = (value: number, max: number) => Math.round(Math.min(Math.max(value, 0), Math.max(max, 0)));
 
+/** Mantem o retangulo do selo dentro da pagina PDF. */
 export function clampSeal(x: number, y: number, size: PageSize) {
   return { x: clamp(x, size.width - SEAL_WIDTH), y: clamp(y, size.height - SEAL_HEIGHT) };
 }
 
 // A click marks the seal's top-left corner; screen Y grows downward while PDF Y grows upward.
+/** Converte coordenadas da tela, com origem no topo, para o espaco PDF. */
 export function screenToPdf(clickX: number, clickY: number, rendered: PageSize, page: PageSize) {
   const x = (clickX / rendered.width) * page.width;
   const top = (clickY / rendered.height) * page.height;
@@ -20,6 +22,7 @@ export function screenToPdf(clickX: number, clickY: number, rendered: PageSize, 
 }
 
 // Inverse conversion, as percentages, to draw the seal over the preview at any zoom.
+/** Converte pontos PDF para percentuais usados na sobreposicao visual do selo. */
 export function pdfToPercent(position: Pick<SealPosition, 'x' | 'y'>, page: PageSize) {
   return {
     left: (position.x / page.width) * 100,
