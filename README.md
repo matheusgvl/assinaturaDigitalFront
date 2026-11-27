@@ -1,62 +1,120 @@
 # SignaPDF — frontend
 
-Frontend inicial do sistema acadêmico de assinatura digital de PDFs da disciplina de Segurança da Informação (UFRPE). A aplicação estabelece a arquitetura React/Vite e os fluxos visuais base; operações de autenticação, assinatura e verificação dependem da API REST do backend e serão entregues em issues posteriores.
+Interface web do sistema acadêmico de assinatura digital de PDFs da disciplina de Segurança da Informação (UFRPE). Permite autenticar com senha, TOTP ou passkey, assinar um PDF posicionando o selo visual, baixar o documento assinado e verificar publicamente a autenticidade de um arquivo.
 
-## Tecnologias
+O frontend não executa criptografia de assinatura nem decide nada de segurança: ele conversa exclusivamente com a API REST do backend ([assinaturaDigital](https://github.com/matheusgvl/assinaturaDigital)), que é a autoridade sobre autenticação, sessões, assinatura e verificação.
 
-React, Vite, TypeScript strict, React Router, Tailwind CSS, Axios, ESLint, Prettier, Vitest e React Testing Library.
+## Funcionalidades
 
-## Executar
+- Cadastro e login com senha, segundo fator TOTP e passkeys (WebAuthn)
+- Sessão com access token apenas em memória, refresh por cookie HttpOnly, logout e aviso de sessão expirada
+- Assinatura: upload validado, prévia paginada do PDF, posicionamento do selo por clique ou teclado e download do arquivo devolvido pela API
+- Verificação pública, sem login, com os estados documento íntegro, documento adulterado e assinatura não encontrada
+- Gestão de passkeys e sessões ativas, troca de senha, ativação/desativação do TOTP e alertas de segurança
 
-Pré-requisito: Node.js 20+.
+## Início rápido
+
+Pré-requisito: Node.js `^20.19.0` ou `>=22.12.0` (exigência do Vite 8).
 
 ```bash
-npm install
-copy .env.example .env.local # Windows; use cp no Linux/macOS
+npm ci
+cp .env.example .env.local   # Windows: copy .env.example .env.local
 npm run dev
 ```
 
-Variáveis públicas: `VITE_API_BASE_URL` e `VITE_API_TIMEOUT_MS`. Não coloque secrets em variáveis `VITE_*`; tokens não são persistidos no localStorage e o cliente está preparado para cookies HttpOnly.
+A aplicação abre em `http://localhost:5173`. Em desenvolvimento, as chamadas para `/api` são repassadas pelo Vite ao backend definido em `API_PROXY_TARGET`. Sem o backend em execução, as telas abrem, mas as operações exibem erro de conexão.
+
+## Variáveis de ambiente
+
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | `/api/v1` | Base das requisições no navegador. Mantenha relativa para que cookies e o cabeçalho CSRF funcionem (mesma origem). |
+| `VITE_API_TIMEOUT_MS` | `10000` | Tempo limite das requisições, em milissegundos. |
+| `API_PROXY_TARGET` | `http://localhost:3000` | Somente desenvolvimento: endereço do backend para o proxy do Vite. |
+
+Variáveis `VITE_*` são públicas e entram no bundle: nunca coloque segredos nelas.
 
 ## Comandos
 
-`npm run dev`, `npm run build`, `npm run preview`, `npm run lint`, `npm run typecheck` e `npm run test`.
+| Comando | Descrição |
+| --- | --- |
+| `npm run dev` | Servidor de desenvolvimento com proxy para a API |
+| `npm run build` | Checagem de tipos e build de produção em `dist/` |
+| `npm run preview` | Serve o build localmente |
+| `npm run typecheck` | TypeScript em modo strict |
+| `npm run lint` | ESLint |
+| `npm run test` | Testes (Vitest + Testing Library + axe-core) |
 
-## Rotas e layout
+Antes de abrir um PR, rode `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` e `npm audit --omit=dev`.
 
-`/` inicial; `/login` login pendente; `/register` cadastro pendente; `/dashboard` painel pendente; `/sign` assinatura pendente; `/verify` verificação pública pendente; qualquer outra rota exibe 404. As rotas públicas usam `PublicLayout`; as rotas internas ficam agrupadas em `AppLayout`, prontas para receber um guard de autenticação futuro sem simular proteção hoje.
+## Rotas
 
-O layout interno possui `Header` e `Sidebar` responsivos. Em telas pequenas, o menu lateral abre por botão com `aria-expanded`, fecha ao navegar e mantém foco visível. A navegação usa `NavLink` para indicar a rota ativa sem recarregar a aplicação.
+| Rota | Acesso | Tela |
+| --- | --- | --- |
+| `/` | Pública | Página inicial |
+| `/login`, `/register` | Pública | Login (senha ou passkey) e cadastro |
+| `/login/totp` | Pública, somente após a senha | Segundo fator TOTP ou código de recuperação |
+| `/verify` | Pública | Verificação de autenticidade de um PDF |
+| `/dashboard` | Autenticada | Painel com atalhos |
+| `/sign` | Autenticada | Upload, prévia, selo e download do PDF assinado |
+| `/security` | Autenticada | Senha, verificação em duas etapas e alertas |
+| `/passkeys` | Autenticada | Registro e revogação de passkeys |
+| `/security/sessions` | Autenticada | Sessões ativas, encerrar uma ou todas |
+| `/security/totp`, `/security/recovery-codes` | Autenticada | Ativação do TOTP e códigos de recuperação |
 
-Componentes compartilhados em `src/components/ui.tsx`: `Button`, `Card`, `Input`, `Label`, `PageHeader`, `Badge`, `Alert` e `Container`. Estados em `src/components/feedback.tsx`: `LoadingSpinner`, `LoadingState`, `ErrorState` e `EmptyState`.
+Rotas autenticadas passam pelo guard `RequireAuth`, que é apenas visual: o backend deve rejeitar qualquer requisição sem sessão válida.
 
-## Cadastro e login
+## Integração com o backend
 
-As rotas `/register` e `/login` possuem formulários responsivos com labels associados, autocomplete, validação de e-mail, mostrar/ocultar senha e estados acessíveis. A senha exige pelo menos 12 caracteres, uma letra maiúscula, uma minúscula, um número e um símbolo, além de confirmação idêntica.
+Os caminhos e formatos abaixo são **provisórios** e estão concentrados em `src/services` e `src/types`; ajuste-os quando o backend publicar os contratos definitivos.
 
-O cliente HTTP usa `VITE_API_BASE_URL` e `VITE_API_TIMEOUT_MS`, com `withCredentials` preparado para cookies HttpOnly. O serviço `src/services/auth.service.ts` usa provisoriamente `POST /auth/register` e `POST /auth/login`; esses caminhos e os formatos definitivos devem ser confirmados pelo contrato do backend.
+| Área | Endpoints |
+| --- | --- |
+| Conta e sessão | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` |
+| TOTP | `POST /auth/totp/setup`, `POST /auth/totp/setup/confirm`, `POST /auth/totp/login/verify`, `POST /auth/totp/disable` |
+| Passkeys | `POST /auth/passkeys/registration/options`, `.../registration/verify`, `.../authentication/options`, `.../authentication/verify`, `GET /auth/passkeys`, `DELETE /auth/passkeys/:id` |
+| Sessões | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `POST /auth/sessions/revoke-all` |
+| Conta | `POST /auth/password`, `GET /auth/alerts`, `POST /auth/alerts/read` |
+| Documentos | `POST /documents/sign` (multipart: `file`, `page`, `x`, `y`; resposta: PDF), `POST /documents/verify` (multipart: `file`) |
 
-Falhas de login usam mensagem genérica e não permitem enumeração de usuários. Respostas HTTP 429 e 423, `Retry-After`, indisponibilidade de rede e falhas temporárias têm feedback visual dedicado. O frontend não executa tentativas automáticas, não cria contadores locais e não persiste senha ou tokens.
+Convenções assumidas pelo frontend:
 
-## Passkeys e TOTP
+- Login responde `{ accessToken }` ou `{ requiresSecondFactor: true, transactionId }`; nenhum token antes do TOTP.
+- O refresh token chega só por cookie HttpOnly; o access token vem no corpo e fica em memória.
+- CSRF por Double Submit Cookie: o cookie `csrf_token` é copiado para o cabeçalho `X-CSRF-Token`.
+- Selo: `x`/`y` são o canto inferior esquerdo em pontos PDF (origem no canto inferior esquerdo da página), caixa de 180 × 60 pt.
+- Verificação responde `status` igual a `valid`, `tampered` ou `not_found`; qualquer outro valor é tratado como falha.
 
-As telas `/passkeys`, `/login` (opção de passkey), `/security/totp`, `/login/totp` e `/security/recovery-codes` preparam os fluxos de autenticação forte.
+## Segurança no frontend
 
-- Passkeys usam `@simplewebauthn/browser`; o desafio vem do backend e a confirmação só é exibida após a resposta do servidor. WebAuthn exige HTTPS ou `localhost`.
-- O TOTP recebe do backend o QR Code, envia o código de seis dígitos para confirmação e não gera ou persiste o segredo no navegador.
-- O desafio TOTP do login deve ser iniciado pelo backend com um identificador de transação pré-autenticação; nenhum token é criado pelo frontend antes da validação completa.
-- Códigos de recuperação são apenas exibidos quando fornecidos pelo backend, podem ser copiados ou baixados localmente e não são persistidos.
+- Senhas, tokens, códigos de recuperação e PDFs nunca vão para `localStorage` ou `sessionStorage`.
+- Mensagens de erro de login são genéricas; detalhes do servidor não são exibidos.
+- PDFs são desenhados em canvas pelo pdf.js (scripts e formulários embutidos não executam); `pdfjs-dist` 6.x, sem a vulnerabilidade GHSA-hq66-cqwq-w95j da linha 5.x.
+- O download de assinatura usa exclusivamente os bytes devolvidos pela API, e só se começarem com `%PDF-`.
+- Revogações e desativação do TOTP exigem confirmação; desativar o TOTP pede um código atual.
 
-Os endpoints atuais são provisórios: `/auth/passkeys/registration/options`, `/auth/passkeys/registration/verify`, `/auth/passkeys/authentication/options`, `/auth/passkeys/authentication/verify`, `/auth/totp/setup`, `/auth/totp/setup/confirm` e `/auth/totp/login/verify`. O backend ainda precisa definir os contratos definitivos, validar desafios, origem/RP ID, assinaturas, contadores, segredo TOTP, janela temporal, hashes dos códigos, rate limiting e emissão segura da sessão.
+Validação efetiva de senha, emissão e revogação de tokens, rate limiting, verificação de PDFs e criptografia permanecem no backend.
 
-## Estrutura e arquitetura
+## Estrutura
 
-`src/app` configura a aplicação e o roteador; `src/components/layout` contém layouts compartilhados; `src/pages` contém páginas; `src/services/api.ts` centraliza o cliente HTTP; `src/styles` contém estilos globais. O frontend comunica-se exclusivamente com a API REST e não acessa PostgreSQL.
+```
+src/
+  app/         roteador, sessão (SessionProvider, RequireAuth)
+  pages/       telas
+  components/  auth, pdf, verify, security, layout e componentes base
+  services/    cliente HTTP (api.ts) e serviços por área
+  hooks/       useApiList
+  types/       contratos provisórios da API
+  utils/       validação de senha e PDF, coordenadas do selo, hash, mensagens de erro
+  styles/      CSS por área
+docs/
+  REQUISITOS.md  checklist de requisitos e evidências
+```
 
-## Segurança e status
+## Testes e acessibilidade
 
-Implementados: base responsiva, navegação, formulários de cadastro/login, passkeys via WebAuthn, telas TOTP e recuperação, validação orientativa de senha, feedback de erros de autenticação, cliente Axios com timeout e cookies HttpOnly. Pendentes no backend: hash e política efetiva de senhas, autenticação, JWT/sessões, rate limiting por IP/conta, bloqueio temporário, validação criptográfica WebAuthn, geração/validação TOTP, proteção real de rotas e contrato definitivo dos endpoints. Nenhum documento, token fictício ou credencial é usado nesta etapa.
+A suíte cobre navegação e guard de rotas, formulários, upload, posicionamento do selo, assinatura, verificação, sessão (refresh, expiração, logout), passkeys, sessões, alertas e uma auditoria automática WCAG com axe-core em todas as telas. O detalhamento por requisito e as evidências de validação estão em [docs/REQUISITOS.md](docs/REQUISITOS.md).
 
-## Validação
+## Licença
 
-Execute `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` e `npm audit --omit=dev` antes de publicar alterações. Os testes cobrem rotas, indicação ativa, estados de feedback, renderização e foco por teclado.
+[MIT](LICENSE)
