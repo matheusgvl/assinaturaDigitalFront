@@ -79,8 +79,8 @@ export function useRedirectTarget() {
 export function RequireAuth() {
   const { status, reload } = useSession();
   const location = useLocation();
-  if (status === 'loading') return <main className="app-main" id="main-content"><LoadingState label="Verificando sessão…" /></main>;
-  if (status === 'error') return <main className="app-main" id="main-content"><ErrorState onRetry={() => void reload()} /></main>;
+  if (status === 'loading') return <main className="app-main" id="main-content" tabIndex={-1}><LoadingState label="Verificando sessão…" /></main>;
+  if (status === 'error') return <main className="app-main" id="main-content" tabIndex={-1}><ErrorState onRetry={() => void reload()} /></main>;
   if (status === 'unauthenticated') return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <Outlet />;
 }
