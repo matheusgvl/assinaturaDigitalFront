@@ -113,6 +113,41 @@ docs/
 
 ## Testes e acessibilidade
 
+## Execucao local para demonstracao
+
+Inicie primeiro o backend, aplique as migrations no banco de demonstracao
+separado e depois execute o frontend:
+
+```powershell
+cd assinaturaDigitalFront
+npm ci
+Copy-Item .env.example .env.local -ErrorAction SilentlyContinue
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+npm run dev
+```
+
+O backend deve estar em `http://localhost:3000` e o frontend em
+`http://localhost:5173`. Em `.env.local`, mantenha `VITE_API_BASE_URL=/api/v1`
+e `API_PROXY_TARGET=http://localhost:3000`. Variaveis `VITE_*` sao publicas e
+nunca podem conter chaves, senhas ou tokens.
+
+O navegador mantem o access token somente em memoria. O refresh token e um
+cookie HttpOnly/SameSite Strict emitido pelo backend e o `csrf_token` e copiado
+para `X-CSRF-Token` somente nas operacoes de refresh e logout. O frontend nao
+decodifica nem decide a validade de `jti`, `session_id`, `iat`, `ip_hash` ou
+`ua_hash`; essa politica e aplicada pelo guard do backend. A troca de senha usa
+`POST /api/v1/auth/password`, apos o qual as sessoes anteriores sao revogadas e
+o usuario deve fazer login novamente.
+
+O roteiro real de homologacao e: cadastro, login, upload de PDF, previa,
+posicionamento do selo, assinatura, download, verificacao valida, verificacao
+de arquivo adulterado e logout. O backend continua sendo a autoridade sobre
+criptografia, rate limiting, sessoes, validacao de PDFs e persistencia de
+metadados.
+
 A suíte cobre navegação e guard de rotas, formulários, upload, posicionamento do selo, assinatura, verificação, sessão (refresh, expiração, logout), passkeys, sessões, alertas e uma auditoria automática WCAG com axe-core em todas as telas. O detalhamento por requisito e as evidências de validação estão em [docs/REQUISITOS.md](docs/REQUISITOS.md).
 
 ## Licença
