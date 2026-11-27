@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios';
+import { AxiosError, AxiosHeaders, type AxiosAdapter, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { authService } from '../services/auth.service';
+import { api } from '../services/api';
+import { LoginForm } from '../components/auth/LoginForm';
 import { DashboardPage } from '../pages/Pages';
 import { RequireAuth, SessionProvider } from './session';
 
@@ -35,4 +37,16 @@ test('renders dashboard shortcuts for an authenticated user', async () => {
   renderAt('/dashboard');
   expect(await screen.findByText('Olá, Ana')).toBeTruthy();
   for (const name of [/assinar documento/i, /verificar documento/i, /dispositivos/i, /sessões ativas/i]) expect(screen.getByRole('link', { name })).toBeTruthy();
+});
+
+test('explains an expired session on the login page after a refresh is rejected', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue({ data: { id: '1', name: 'Ana', email: 'a@example.com' } } as AxiosResponse);
+  render(<SessionProvider><MemoryRouter initialEntries={['/dashboard']}><Routes><Route path="/login" element={<LoginForm />} /><Route element={<RequireAuth />}><Route path="/dashboard" element={<DashboardPage />} /></Route></Routes></MemoryRouter></SessionProvider>);
+  await screen.findByText('Olá, Ana');
+  // Any protected call now gets 401 and the refresh is rejected too.
+  const original = api.defaults.adapter;
+  api.defaults.adapter = (async (config: InternalAxiosRequestConfig) => { throw new AxiosError('fail', undefined, config, undefined, { status: 401, data: {}, statusText: '', headers: {}, config } as AxiosResponse); }) as AxiosAdapter;
+  await api.get('/documents').catch(() => undefined);
+  api.defaults.adapter = original;
+  expect(await screen.findByText(/sua sessão expirou/i)).toBeTruthy();
 });
