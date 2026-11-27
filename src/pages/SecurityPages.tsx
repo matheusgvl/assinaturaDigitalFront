@@ -7,6 +7,9 @@ import { useApiList } from '../hooks/useApiList';
 import { useSession } from '../app/session';
 import { securityService } from '../services/security.service';
 import { useState } from 'react';
+import { ChangePasswordForm } from '../components/security/ChangePasswordForm';
+import { TwoFactorSection } from '../components/security/TwoFactorSection';
+import { SecurityAlerts } from '../components/security/SecurityAlerts';
 
 const formatDate = (iso?: string) => (iso && !Number.isNaN(Date.parse(iso)) ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
@@ -96,6 +99,20 @@ export function SessionsPage() {
           </>
         )}
       </Card>
+    </Container>
+  );
+}
+
+export function AccountSecurityPage() {
+  // Sensitive changes generate new alerts on the server; remounting the list fetches them right away.
+  const [alertsKey, setAlertsKey] = useState(0);
+  const refreshAlerts = () => setAlertsKey(key => key + 1);
+  return (
+    <Container className="page-card security-page">
+      <PageHeader eyebrow="Segurança" title="Segurança da conta" description="Senha, verificação em duas etapas e eventos recentes da sua conta." />
+      <SecurityAlerts key={alertsKey} />
+      <TwoFactorSection onChanged={refreshAlerts} />
+      <ChangePasswordForm onChanged={refreshAlerts} />
     </Container>
   );
 }

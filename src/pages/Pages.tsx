@@ -10,6 +10,7 @@ const shortcuts = [
   { to: '/verify', title: 'Verificar documento', text: 'Confira a autenticidade e a integridade de um PDF assinado.' },
   { to: '/passkeys', title: 'Dispositivos', text: 'Gerencie as passkeys vinculadas à sua conta.' },
   { to: '/security/sessions', title: 'Sessões ativas', text: 'Veja onde sua conta está conectada.' },
+  { to: '/security', title: 'Segurança da conta', text: 'Senha, verificação em duas etapas e alertas.' },
 ];
 export function DashboardPage() { const { user } = useSession(); return <Container className="page-card"><PageHeader eyebrow="Painel" title={user ? `Olá, ${user.name}` : 'Painel'} description="Escolha o que deseja fazer." /><nav className="dashboard-grid" aria-label="Atalhos do painel">{shortcuts.map(item => <Link key={item.to} className="card dashboard-shortcut" to={item.to}><h2>{item.title}</h2><p>{item.text}</p></Link>)}</nav></Container>; }
 export function NotFoundPage() { return <section className="card page-card"><p className="eyebrow">Erro 404</p><h1>Página não encontrada</h1><p>O endereço informado não corresponde a uma página disponível.</p><Link className="button primary" to="/">Voltar ao início</Link></section>; }
