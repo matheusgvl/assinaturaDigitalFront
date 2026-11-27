@@ -1,7 +1,7 @@
 import { api } from './api';
 import type { VerificationResponse } from '../types/verification';
 
-// Provisional path; public endpoint, no session required.
+// Public multipart contract implemented by /api/v1/documents/verify.
 export const verificationService = {
   verify(file: File, onProgress?: (percent: number) => void) {
     const form = new FormData();
