@@ -1,7 +1,7 @@
 import { api } from './api';
 import type { SealPosition } from '../utils/seal-position';
 
-// Provisional path until the backend publishes its signing contract.
+// Multipart contract implemented by the backend under /api/v1/documents/sign.
 export const signatureService = {
   sign(file: File, seal: SealPosition, onProgress?: (percent: number) => void) {
     const form = new FormData();
