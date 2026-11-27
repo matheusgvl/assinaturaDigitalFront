@@ -4,10 +4,15 @@ import { Alert, Label } from '../ui';
 
 type PdfUploadProps = { onSelect: (file: File | null) => void };
 
+/** Recebe o PDF e aplica uma validacao rapida antes de entrega-lo ao fluxo de assinatura. */
 export function PdfUpload({ onSelect }: PdfUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
+  /**
+   * Valida extensao, tamanho e magic number no navegador.
+   * O backend repete todas as verificacoes e continua sendo a autoridade de seguranca.
+   */
   async function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     setError(null);

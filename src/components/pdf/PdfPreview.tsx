@@ -5,6 +5,7 @@ import { Button } from '../ui';
 import { ErrorState, LoadingState } from '../feedback';
 import { clampSeal, pdfToPercent, screenToPdf, type PageSize, type SealPosition } from '../../utils/seal-position';
 
+// O worker separado evita executar o parser PDF na thread principal da interface.
 GlobalWorkerOptions.workerSrc = workerUrl;
 
 const KEY_STEP = 5;
@@ -12,7 +13,11 @@ const keyMoves: Record<string, [number, number]> = { ArrowLeft: [-KEY_STEP, 0], 
 
 type PdfPreviewProps = { file: File; seal: SealPosition | null; sealLabel: string; onPlace: (seal: SealPosition) => void };
 
-// Pages are drawn to a canvas: embedded scripts, forms and links in the PDF never run or become clickable.
+/**
+ * Renderiza o PDF em canvas e converte cliques da tela para coordenadas PDF.
+ * Scripts, formularios e links incorporados nao sao executados nem clicaveis.
+ * O componente recebe o selo controlado pela pagina e devolve apenas a nova posicao.
+ */
 export function PdfPreview({ file, seal, sealLabel, onPlace }: PdfPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
@@ -20,7 +25,7 @@ export function PdfPreview({ file, seal, sealLabel, onPlace }: PdfPreviewProps) 
   const [pageSize, setPageSize] = useState<PageSize | null>(null);
   const [failed, setFailed] = useState(false);
 
-  // The parent remounts this component (key) for each new file, so state starts clean.
+  // A pagina remonta este componente para cada arquivo, iniciando o estado limpo.
   useEffect(() => {
     let cancelled = false;
     let loadTask: PDFDocumentLoadingTask | null = null;
@@ -29,7 +34,7 @@ export function PdfPreview({ file, seal, sealLabel, onPlace }: PdfPreviewProps) 
       loadTask = getDocument({ data, enableXfa: false });
       return loadTask.promise.then(loaded => { if (!cancelled) setDoc(loaded); }, () => { if (!cancelled) setFailed(true); });
     });
-    // destroy() frees the worker copy of the document when the file changes or the page closes.
+    // Libera a copia do documento mantida pelo worker quando o arquivo muda ou a pagina fecha.
     return () => { cancelled = true; void loadTask?.destroy(); };
   }, [file]);
 
@@ -40,7 +45,7 @@ export function PdfPreview({ file, seal, sealLabel, onPlace }: PdfPreviewProps) 
     let cancelled = false;
     void doc.getPage(page).then(pdfPage => {
       if (cancelled) return;
-      // shortcut: uses the displayed (rotated) page box; pages with /Rotate need backend agreement on the coordinate space.
+      // Usa a caixa visivel da pagina; paginas com /Rotate exigem o mesmo espaco de coordenadas no backend.
       const base = pdfPage.getViewport({ scale: 1 });
       setPageSize({ width: base.width, height: base.height });
       const viewport = pdfPage.getViewport({ scale: 1.5 });
@@ -55,12 +60,14 @@ export function PdfPreview({ file, seal, sealLabel, onPlace }: PdfPreviewProps) 
   if (failed) return <ErrorState />;
   if (!doc) return <LoadingState label="Carregando prévia…" />;
 
+  /** Converte a posicao do clique na pagina renderizada para pontos PDF. */
   function place(event: React.MouseEvent<HTMLDivElement>) {
     if (!pageSize) return;
     const rect = event.currentTarget.getBoundingClientRect();
     onPlace({ page, ...screenToPdf(event.clientX - rect.left, event.clientY - rect.top, { width: rect.width, height: rect.height }, pageSize) });
   }
 
+  /** Permite ajuste fino por teclado sem ultrapassar os limites da pagina. */
   function nudge(event: React.KeyboardEvent) {
     const move = keyMoves[event.key];
     if (!move || !seal || !pageSize) return;
