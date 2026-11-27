@@ -18,7 +18,7 @@ const expiredListeners = new Set<() => void>();
 export function onSessionExpired(listener: () => void) { expiredListeners.add(listener); return () => { expiredListeners.delete(listener); }; }
 
 // Credential endpoints answer 401 for wrong input; refreshing there would hide the real error or loop.
-const NO_REFRESH = ['/auth/refresh', '/auth/login', '/auth/logout', '/auth/totp/login/verify', '/auth/passkeys/authentication/verify'];
+const NO_REFRESH = ['/auth/refresh', '/auth/login', '/auth/logout', '/auth/totp/login/verify', '/auth/passkeys/authentication/options', '/auth/passkeys/authentication/verify', '/auth/passkeys/registration/options', '/auth/passkeys/registration/verify'];
 
 let refreshing: Promise<string> | null = null;
 // The refresh token travels only in the HttpOnly cookie (REQ-20); concurrent 401s share one refresh call.

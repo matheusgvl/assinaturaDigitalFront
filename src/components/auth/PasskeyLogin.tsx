@@ -1,4 +1,55 @@
-import { useState } from 'react'; import { useNavigate } from 'react-router-dom'; import { useRedirectTarget, useSession } from '../../app/session'; import { startAuthentication } from '@simplewebauthn/browser'; import { webauthnService } from '../../services/webauthn.service'; import { Alert, Button } from '../ui';
-export function PasskeyLogin() { const navigate = useNavigate(); const target = useRedirectTarget(); const session = useSession(); const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null); const supported = typeof window !== 'undefined' && typeof window.PublicKeyCredential !== 'undefined';
-  async function login() { if (!supported || loading) return; setLoading(true); setError(null); try { const options = (await webauthnService.requestAuthenticationOptions()).data; const credential = await startAuthentication({ optionsJSON: options as Parameters<typeof startAuthentication>[0]['optionsJSON'] }); const result = await webauthnService.confirmAuthentication(credential); if (result.data.confirmed && result.data.accessToken) { await session.signIn(result.data.accessToken); navigate(target, { replace: true }); } else setError('Não foi possível autenticar com as credenciais informadas.'); } catch (cause) { const name = cause instanceof Error ? cause.name : ''; setError(name === 'NotAllowedError' ? 'A autenticação foi cancelada ou não foi permitida pelo autenticador.' : 'Não foi possível autenticar com as credenciais informadas.'); } finally { setLoading(false); } }
-  return <div className="passkey-login"><div className="auth-divider"><span>ou</span></div>{error && <Alert tone="danger">{error}</Alert>}<Button variant="secondary" onClick={login} disabled={!supported || loading}>{loading ? 'Aguardando autenticador…' : 'Entrar com passkey'}</Button>{!supported && <p className="field-error">Este navegador não oferece suporte a passkeys.</p>}</div>; }
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { browserSupportsWebAuthn, startAuthentication, WebAuthnAbortService } from '@simplewebauthn/browser';
+import { useRedirectTarget, useSession } from '../../app/session';
+import { webauthnService } from '../../services/webauthn.service';
+import { Alert, Button } from '../ui';
+
+/** Abre o autenticador e encaminha contas com TOTP para a segunda etapa. */
+export function PasskeyLogin() {
+  const navigate = useNavigate();
+  const target = useRedirectTarget();
+  const { signIn } = useSession();
+  const [phase, setPhase] = useState<'idle' | 'request' | 'authenticator'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const supported = browserSupportsWebAuthn();
+
+  async function login() {
+    if (!supported || phase !== 'idle') return;
+    setPhase('request');
+    setError(null);
+    try {
+      const { data: { challengeId, options } } = await webauthnService.requestAuthenticationOptions();
+      setPhase('authenticator');
+      const credential = await startAuthentication({ optionsJSON: options });
+      setPhase('request');
+      const { data } = await webauthnService.confirmAuthentication(challengeId, credential);
+      if ('requiresSecondFactor' in data) {
+        navigate('/login/totp', { state: { transactionId: data.transactionId, from: target } });
+      } else {
+        await signIn(data.accessToken);
+        navigate(target, { replace: true });
+      }
+    } catch (cause) {
+      const cancelled = cause instanceof Error && ['AbortError', 'NotAllowedError', 'ERROR_CEREMONY_ABORTED'].includes(cause.name);
+      setError(cancelled
+        ? 'A autenticação foi cancelada ou não foi permitida pelo autenticador.'
+        : 'Não foi possível autenticar com a passkey.');
+    } finally {
+      setPhase('idle');
+    }
+  }
+
+  return (
+    <div className="passkey-login">
+      <div className="auth-divider"><span>ou</span></div>
+      {error && <Alert tone="danger">{error}</Alert>}
+      <Button variant="secondary" onClick={() => void login()} disabled={!supported || phase !== 'idle'}>
+        {phase === 'idle' ? 'Entrar com passkey' : 'Aguardando autenticação…'}
+      </Button>
+      {phase === 'authenticator' &&
+        <Button variant="ghost" onClick={() => WebAuthnAbortService.cancelCeremony()}>Cancelar</Button>}
+      {!supported && <p className="field-error">Este navegador não oferece suporte a passkeys.</p>}
+    </div>
+  );
+}

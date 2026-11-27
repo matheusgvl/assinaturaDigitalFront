@@ -1,3 +1,6 @@
-export type WebAuthnCreationOptions = { challenge: string; rp: { name: string; id?: string }; user: { id: string; name: string; displayName: string }; pubKeyCredParams: Array<{ type: 'public-key'; alg: number }>; timeout?: number; excludeCredentials?: Array<{ type: 'public-key'; id: string; transports?: string[] }>; authenticatorSelection?: Record<string, unknown> };
-export type WebAuthnRequestOptions = { challenge: string; timeout?: number; rpId?: string; allowCredentials?: Array<{ type: 'public-key'; id: string; transports?: string[] }>; userVerification?: 'required' | 'preferred' | 'discouraged' };
-export type WebAuthnResult = { confirmed: boolean; accessToken?: string; user?: { id: string; name: string } };
+/** O identificador acompanha as opções até a resposta da mesma cerimônia. */
+export type PasskeyCeremony<T> = { challengeId: string; options: T };
+
+export type PasskeyLoginResult =
+  | { confirmed: true; accessToken: string }
+  | { confirmed: true; requiresSecondFactor: true; transactionId: string };
