@@ -5,19 +5,22 @@ import { PdfUpload } from '../components/pdf/PdfUpload';
 import { useSession } from '../app/session';
 import { signatureService } from '../services/signature.service';
 import { sha256Hex } from '../utils/file-hash';
+import { isPdfBlob } from '../utils/pdf-validation';
+import { signErrorMessage, signedFileName } from '../utils/sign-errors';
+import { SignResult } from '../components/pdf/SignResult';
 import type { SealPosition } from '../utils/seal-position';
 
 // pdf.js is heavy; load it only when a document is previewed.
 const PdfPreview = lazy(() => import('../components/pdf/PdfPreview').then(module => ({ default: module.PdfPreview })));
 
-type SendState = 'idle' | 'sending' | 'done' | 'failed';
+type SendState = { kind: 'idle' } | { kind: 'sending'; progress: number } | { kind: 'done'; signed: Blob } | { kind: 'failed'; message: string };
 
 export function SignDocumentPage() {
   const { user } = useSession();
   const [file, setFile] = useState<File | null>(null);
   const [seal, setSeal] = useState<SealPosition | null>(null);
   const [hash, setHash] = useState<{ file: File; value: string } | null>(null);
-  const [state, setState] = useState<SendState>('idle');
+  const [state, setState] = useState<SendState>({ kind: 'idle' });
 
   useEffect(() => {
     if (!file) return;
@@ -26,12 +29,24 @@ export function SignDocumentPage() {
     return () => { cancelled = true; };
   }, [file]);
 
-  function choose(next: File | null) { setFile(next); setSeal(null); setState('idle'); }
+  const [uploadKey, setUploadKey] = useState(0);
+
+  function choose(next: File | null) { setFile(next); setSeal(null); setState({ kind: 'idle' }); }
+  function reset() { choose(null); setUploadKey(key => key + 1); } // remount clears the file input
+  // Moving the seal invalidates a previous result; ignored while a request is in flight.
+  function placeSeal(next: SealPosition) { if (state.kind === 'sending') return; setSeal(next); setState({ kind: 'idle' }); }
 
   async function sign() {
-    if (!file || !seal || state === 'sending') return;
-    setState('sending');
-    try { await signatureService.sign(file, seal); setState('done'); } catch { setState('failed'); }
+    if (!file || !seal || state.kind === 'sending') return;
+    setState({ kind: 'sending', progress: 0 });
+    try {
+      const response = await signatureService.sign(file, seal, progress => setState({ kind: 'sending', progress }));
+      // Guards against an error page or JSON body being offered as the signed PDF.
+      if (await isPdfBlob(response.data)) setState({ kind: 'done', signed: response.data });
+      else setState({ kind: 'failed', message: 'O servidor não devolveu um PDF assinado válido.' });
+    } catch (error) {
+      setState({ kind: 'failed', message: signErrorMessage(error) });
+    }
   }
 
   const signer = user?.name ?? 'Usuário autenticado';
@@ -39,12 +54,12 @@ export function SignDocumentPage() {
   return (
     <Container className="page-card">
       <PageHeader eyebrow="Assinatura" title="Assinar documento" description="Selecione o PDF, posicione o selo e envie para assinatura." />
-      <Card><PdfUpload onSelect={choose} /></Card>
+      <Card><PdfUpload key={uploadKey} onSelect={choose} /></Card>
       {file && (
         <div className="sign-layout">
           <Card className="pdf-card">
             <Suspense fallback={<LoadingState label="Carregando prévia…" />}>
-              <PdfPreview key={`${file.name}-${file.size}-${file.lastModified}`} file={file} seal={seal} sealLabel={signer} onPlace={setSeal} />
+              <PdfPreview key={`${file.name}-${file.size}-${file.lastModified}`} file={file} seal={seal} sealLabel={signer} onPlace={placeSeal} />
             </Suspense>
           </Card>
           <Card className="seal-summary">
@@ -57,9 +72,11 @@ export function SignDocumentPage() {
               <dt>Posição</dt><dd>{seal ? `Página ${seal.page}, X ${seal.x} pt, Y ${seal.y} pt` : 'Clique na prévia para posicionar'}</dd>
             </dl>
             <p className="field-hint">O hash exibido é uma prévia calculada no navegador; o valor oficial é calculado pelo servidor.</p>
-            {state === 'failed' && <Alert tone="danger">Não foi possível assinar o documento. Tente novamente.</Alert>}
-            {state === 'done' && <Alert tone="success">Documento enviado e assinado pelo servidor.</Alert>}
-            <Button onClick={() => void sign()} disabled={!seal || state === 'sending'}>{state === 'sending' ? 'Enviando…' : 'Assinar documento'}</Button>
+            {state.kind === 'failed' && <Alert tone="danger">{state.message}</Alert>}
+            {state.kind === 'sending' && <div className="sign-progress" role="status"><progress max={100} value={state.progress} aria-label="Progresso do envio" /><span>{state.progress < 100 ? `Enviando… ${state.progress}%` : 'Assinando no servidor…'}</span></div>}
+            {state.kind === 'done'
+              ? <SignResult signed={state.signed} fileName={signedFileName(file.name)} onReset={reset} />
+              : <Button onClick={() => void sign()} disabled={!seal || state.kind === 'sending'}>{state.kind === 'sending' ? 'Enviando…' : 'Assinar documento'}</Button>}
           </Card>
         </div>
       )}
