@@ -15,5 +15,4 @@ const shortcuts = [
 ];
 export function DashboardPage() { const { user } = useSession(); return <Container className="page-card"><PageHeader eyebrow="Painel" title={user ? `Olá, ${user.name}` : 'Painel'} description="Escolha o que deseja fazer." /><nav className="dashboard-grid" aria-label="Atalhos do painel">{shortcuts.map(item => <Link key={item.to} className="card dashboard-shortcut" to={item.to}><h2>{item.title}</h2><p>{item.text}</p></Link>)}</nav></Container>; }
 export function SessionsPage() { return <Pending title="Sessões ativas" text="A lista de sessões será implementada na issue de dispositivos e sessões." />; }
-export function VerifyDocumentPage() { return <Pending title="Verificar documento" text="A verificação pública depende do endpoint de validação do backend." />; }
 export function NotFoundPage() { return <section className="card page-card"><p className="eyebrow">Erro 404</p><h1>Página não encontrada</h1><p>O endereço informado não corresponde a uma página disponível.</p><Link className="button primary" to="/">Voltar ao início</Link></section>; }
