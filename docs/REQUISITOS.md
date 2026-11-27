@@ -55,7 +55,7 @@ Conferências manuais no navegador, com backend simulado:
 
 ## Pendências conhecidas
 
-- Todos os endpoints e formatos de resposta são provisórios até o backend publicar os contratos (ver README).
-- O backend ainda não expõe a API sob `/api/v1`; o proxy de desenvolvimento assume esse prefixo.
+- TOTP, passkeys, sessões avançadas e auditoria dependem de endpoints do backend que ainda estão em issues próprias.
+- O contrato de documentos já está publicado sob `/api/v1/documents/sign` e `/api/v1/documents/verify`; o proxy de desenvolvimento assume esse prefixo.
 - Páginas com rotação (`/Rotate`) usam o espaço de coordenadas exibido; alinhar com o backend.
-- ID e data UTC da assinatura serão exibidos no resultado da assinatura quando o backend definir como os devolve.
+- ID, data UTC, nome do assinante e hash do documento são confirmados pela resposta pública de verificação depois do download do PDF assinado.
