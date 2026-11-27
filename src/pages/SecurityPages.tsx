@@ -1,34 +1,89 @@
 import { useNavigate } from 'react-router-dom';
-import { Alert, Badge, Card, Container, PageHeader } from '../components/ui';
+import { Alert, Badge, Button, Card, Container, Input, Label, PageHeader } from '../components/ui';
 import { EmptyState, ErrorState, LoadingState } from '../components/feedback';
 import { PasskeyRegistration } from '../components/auth/PasskeyRegistration';
 import { ConfirmAction } from '../components/security/ConfirmAction';
 import { useApiList } from '../hooks/useApiList';
 import { useSession } from '../app/session';
 import { securityService } from '../services/security.service';
-import { useState } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { ChangePasswordForm } from '../components/security/ChangePasswordForm';
 import { TwoFactorSection } from '../components/security/TwoFactorSection';
 import { SecurityAlerts } from '../components/security/SecurityAlerts';
+import type { PasskeyDevice } from '../types/security';
 
 const formatDate = (iso?: string) => (iso && !Number.isNaN(Date.parse(iso)) ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
-export function DevicesPage() {
-  const { state, reload } = useApiList(securityService.listPasskeys);
+/** Pede confirmação de identidade antes de administrar o dispositivo selecionado. */
+function PasskeyActions({ device, onChanged }: { device: PasskeyDevice; onChanged: () => Promise<void> }) {
+  const [mode, setMode] = useState<'rename' | 'revoke' | null>(null);
+  const [name, setName] = useState(device.name);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inputId = useId();
 
-  async function revoke(id: string) {
+  function select(nextMode: 'rename' | 'revoke' | null) {
+    setMode(nextMode);
+    setPassword('');
+    setName(device.name);
     setError(null);
-    try { await securityService.revokePasskey(id); await reload(); } catch { setError('Não foi possível revogar a passkey. Tente novamente.'); }
   }
 
+  async function confirm(event: FormEvent) {
+    event.preventDefault();
+    if (!mode || !password || busy || (mode === 'rename' && !name.trim())) return;
+    setBusy(true);
+    setError(null);
+    setPassword('');
+    try {
+      if (mode === 'rename') await securityService.renamePasskey(device.id, name.trim(), password);
+      else await securityService.revokePasskey(device.id, password);
+      select(null);
+      await onChanged();
+    } catch {
+      setError('Não foi possível atualizar a passkey. Confira a senha e a sessão.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!mode) return (
+    <div className="confirm-action">
+      <Button variant="ghost" onClick={() => select('rename')}>Renomear</Button>
+      <Button variant="ghost" onClick={() => select('revoke')}>Revogar</Button>
+    </div>
+  );
+
+  return (
+    <form className="confirm-action" onSubmit={confirm}>
+      {mode === 'revoke' && <span>{`Revogar a passkey "${device.name}"?`}</span>}
+      {mode === 'rename' && <div className="field">
+        <Label htmlFor={`${inputId}-name`}>Nome do dispositivo</Label>
+        <Input id={`${inputId}-name`} value={name} onChange={e => setName(e.target.value)} maxLength={100} required disabled={busy} />
+      </div>}
+      <div className="field">
+        <Label htmlFor={`${inputId}-password`}>Confirme sua senha</Label>
+        <Input id={`${inputId}-password`} type="password" autoComplete="current-password"
+          value={password} onChange={e => setPassword(e.target.value)} maxLength={256} required disabled={busy} />
+      </div>
+      {error && <Alert tone="danger">{error}</Alert>}
+      <Button type="submit" disabled={busy || !password || (mode === 'rename' && !name.trim())}>
+        {busy ? 'Aguarde…' : mode === 'rename' ? 'Salvar nome' : 'Revogar'}
+      </Button>
+      <Button type="button" variant="ghost" disabled={busy} onClick={() => select(null)}>Cancelar</Button>
+    </form>
+  );
+}
+
+export function DevicesPage() {
+  const { state, reload } = useApiList(securityService.listPasskeys);
   return (
     <Container className="page-card security-page">
       <PageHeader eyebrow="Segurança" title="Dispositivos" description="Passkeys vinculadas à sua conta. Revogue as que você não reconhece ou não usa mais." />
       <PasskeyRegistration onRegistered={() => void reload()} />
       <Card className="security-list">
         <h2>Passkeys registradas</h2>
-        {error && <Alert tone="danger">{error}</Alert>}
         {state.status === 'loading' && <LoadingState label="Carregando dispositivos…" />}
         {state.status === 'error' && <ErrorState onRetry={() => void reload()} />}
         {state.status === 'ready' && state.items.length === 0 && <EmptyState title="Nenhuma passkey registrada" description="Registre uma passkey acima para entrar sem senha." />}
@@ -40,7 +95,7 @@ export function DevicesPage() {
                   <strong>{device.name}</strong>
                   <p>Registrada em {formatDate(device.createdAt)} · Último uso {formatDate(device.lastUsedAt)}</p>
                 </div>
-                <ConfirmAction label="Revogar" confirmLabel="Revogar" question={`Revogar a passkey "${device.name}"?`} onConfirm={() => revoke(device.id)} />
+                <PasskeyActions device={device} onChanged={reload} />
               </li>
             ))}
           </ul>

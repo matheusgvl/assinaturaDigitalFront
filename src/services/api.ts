@@ -39,6 +39,7 @@ type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean };
 api.interceptors.response.use(undefined, async (error: AxiosError) => {
   const config = error.config as RetriableConfig | undefined;
   if (error.response?.status !== 401 || !config || config._retried || NO_REFRESH.includes(config.url ?? '')) throw error;
+  if (['put', 'delete'].includes(config.method ?? '') && config.url?.startsWith('/auth/passkeys/')) throw error;
   config._retried = true;
   try {
     await refreshAccessToken();

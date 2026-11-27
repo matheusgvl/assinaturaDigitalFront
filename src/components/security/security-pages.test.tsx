@@ -32,8 +32,9 @@ test('lists passkeys and revokes only after confirmation', async () => {
   fireEvent.click(within(row('Notebook')).getByRole('button', { name: 'Cancelar' }));
   expect(revoke).not.toHaveBeenCalled();
   fireEvent.click(within(row('Notebook')).getByRole('button', { name: 'Revogar' }));
+  fireEvent.change(within(row('Notebook')).getByLabelText('Confirme sua senha'), { target: { value: 'test-password' } });
   fireEvent.click(within(row('Notebook')).getAllByRole('button', { name: 'Revogar' })[0]);
-  await waitFor(() => expect(revoke).toHaveBeenCalledWith('pk/1'));
+  await waitFor(() => expect(revoke).toHaveBeenCalledWith('pk/1', 'test-password'));
   await waitFor(() => expect(screen.queryByText('Notebook')).toBeNull());
 });
 
