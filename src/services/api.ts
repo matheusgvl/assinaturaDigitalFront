@@ -4,9 +4,7 @@ export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || 10000),
   withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
   // Double Submit Cookie (REQ-65): axios copies this readable cookie into the header on same-origin requests.
-  // Provisional names until the backend defines its CSRF strategy.
   xsrfCookieName: 'csrf_token',
   xsrfHeaderName: 'X-CSRF-Token',
 });

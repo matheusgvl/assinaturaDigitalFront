@@ -9,9 +9,8 @@ export const signatureService = {
     form.append('page', String(seal.page));
     form.append('x', String(seal.x));
     form.append('y', String(seal.y));
-    // The default JSON content type would make axios serialize the form; multipart keeps the binary file.
+    // Leave Content-Type unset so the browser adds the multipart boundary.
     return api.post<Blob>('/documents/sign', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       responseType: 'blob',
       onUploadProgress: event => { if (onProgress && event.total) onProgress(Math.round((event.loaded / event.total) * 100)); },
     });

@@ -22,7 +22,7 @@ cp .env.example .env.local   # Windows: copy .env.example .env.local
 npm run dev
 ```
 
-A aplicação abre em `http://localhost:5173`. Em desenvolvimento, as chamadas para `/api` são repassadas pelo Vite ao backend definido em `API_PROXY_TARGET`. Sem o backend em execução, as telas abrem, mas as operações exibem erro de conexão.
+A aplicação abre em `http://localhost:5173`. Em desenvolvimento, as chamadas para `/api` são repassadas pelo Vite ao backend definido em `API_PROXY_TARGET`. O backend deve estar configurado e com as migrations aplicadas antes de testar cadastro, login, assinatura ou verificação.
 
 ## Variáveis de ambiente
 
@@ -66,7 +66,7 @@ Rotas autenticadas passam pelo guard `RequireAuth`, que é apenas visual: o back
 
 ## Integração com o backend
 
-Os caminhos e formatos abaixo são **provisórios** e estão concentrados em `src/services` e `src/types`; ajuste-os quando o backend publicar os contratos definitivos.
+Os caminhos e formatos de autenticação e documentos abaixo correspondem ao contrato publicado pelo backend. TOTP, passkeys e sessões avançadas ainda dependem das respectivas rotas do backend.
 
 | Área | Endpoints |
 | --- | --- |
@@ -81,7 +81,7 @@ Convenções assumidas pelo frontend:
 
 - Login responde `{ accessToken }` ou `{ requiresSecondFactor: true, transactionId }`; nenhum token antes do TOTP.
 - O refresh token chega só por cookie HttpOnly; o access token vem no corpo e fica em memória.
-- CSRF por Double Submit Cookie: o cookie `csrf_token` é copiado para o cabeçalho `X-CSRF-Token`.
+- CSRF por Double Submit Cookie: o backend emite `csrf_token` com `SameSite=Strict`; o Axios copia esse cookie para `X-CSRF-Token` nas chamadas same-origin de refresh/logout.
 - Selo: `x`/`y` são o canto inferior esquerdo em pontos PDF (origem no canto inferior esquerdo da página), caixa de 180 × 60 pt.
 - Verificação responde `status` igual a `valid`, `tampered` ou `not_found`; qualquer outro valor é tratado como falha.
 
@@ -93,7 +93,7 @@ Convenções assumidas pelo frontend:
 - O download de assinatura usa exclusivamente os bytes devolvidos pela API, e só se começarem com `%PDF-`.
 - Revogações e desativação do TOTP exigem confirmação; desativar o TOTP pede um código atual.
 
-Validação efetiva de senha, emissão e revogação de tokens, rate limiting, verificação de PDFs e criptografia permanecem no backend.
+Validação efetiva de senha, emissão e revogação de tokens, rate limiting, verificação de PDFs e criptografia permanecem no backend. O backend não persiste os bytes dos PDFs: executa o processamento em memória e guarda apenas metadados da assinatura.
 
 ## Estrutura
 
@@ -104,7 +104,7 @@ src/
   components/  auth, pdf, verify, security, layout e componentes base
   services/    cliente HTTP (api.ts) e serviços por área
   hooks/       useApiList
-  types/       contratos provisórios da API
+  types/       contratos da API e dos recursos ainda em evolução
   utils/       validação de senha e PDF, coordenadas do selo, hash, mensagens de erro
   styles/      CSS por área
 docs/

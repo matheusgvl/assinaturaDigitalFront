@@ -20,6 +20,13 @@ export function VerificationResult({ result }: { result: VerificationResponse })
       </div>
     );
   }
+  if (result.status !== 'valid') {
+    return (
+      <div className="verify-result verify-error">
+        <Alert tone="danger"><strong>Resposta de verificação inválida.</strong> O servidor devolveu um estado desconhecido.</Alert>
+      </div>
+    );
+  }
   const signedAt = formatUtc(result.signedAt);
   return (
     <div className="verify-result verify-valid">
