@@ -72,7 +72,7 @@ test('reports a wrong current password without details', async () => {
   expect(document.body.textContent).not.toContain('hash mismatch');
 });
 
-test('disabling TOTP requires a current code', async () => {
+test('disabling TOTP requires the current password and a current code', async () => {
   const disable = vi.spyOn(accountService, 'disableTotp').mockResolvedValue(ok(undefined));
   renderPage(true);
   const box = await waitFor(() => section(/verificação em duas etapas/i));
@@ -81,8 +81,10 @@ test('disabling TOTP requires a current code', async () => {
   const confirm = within(box).getByRole('button', { name: 'Confirmar desativação' }) as HTMLButtonElement;
   expect(confirm.disabled).toBe(true);
   fireEvent.change(within(box).getByLabelText('Código do aplicativo'), { target: { value: '123456' } });
+  expect(confirm.disabled).toBe(true);
+  fireEvent.change(within(box).getByLabelText('Senha atual'), { target: { value: 'Current-password-1!' } });
   fireEvent.click(confirm);
-  await waitFor(() => expect(disable).toHaveBeenCalledWith({ code: '123456' }));
+  await waitFor(() => expect(disable).toHaveBeenCalledWith({ currentPassword: 'Current-password-1!', code: '123456' }));
 });
 
 test('offers activation when TOTP is inactive', async () => {

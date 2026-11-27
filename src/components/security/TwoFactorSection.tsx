@@ -5,18 +5,19 @@ import { useSession } from '../../app/session';
 import { accountService } from '../../services/account.service';
 
 export function TwoFactorSection({ onChanged }: { onChanged?: () => void } = {}) {
-  const { user, reload } = useSession();
+  const { user, signOut } = useSession();
   const [disabling, setDisabling] = useState(false);
   const [code, setCode] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const enabled = Boolean(user?.totpEnabled);
 
   async function disable(event: React.FormEvent) {
     event.preventDefault();
-    if (!/^\d{6}$/.test(code) || loading) return;
+    if (!/^\d{6}$/.test(code) || !currentPassword || loading) return;
     setLoading(true); setError(null);
-    try { await accountService.disableTotp({ code }); setDisabling(false); setCode(''); await reload(); onChanged?.(); } catch { setError('O código não foi aceito. A verificação em duas etapas continua ativa.'); } finally { setLoading(false); }
+    try { await accountService.disableTotp({ currentPassword, code }); setDisabling(false); setCode(''); setCurrentPassword(''); onChanged?.(); await signOut(); } catch { setError('Não foi possível confirmar a senha e o código. A verificação em duas etapas continua ativa.'); } finally { setLoading(false); }
   }
 
   return (
@@ -27,10 +28,11 @@ export function TwoFactorSection({ onChanged }: { onChanged?: () => void } = {})
       {enabled && !disabling && <Button variant="ghost" onClick={() => setDisabling(true)}>Desativar</Button>}
       {enabled && disabling && (
         <form onSubmit={disable} className="totp-disable">
-          <Alert tone="danger">Sem o segundo fator, sua conta fica protegida apenas pela senha. Confirme com um código atual do aplicativo.</Alert>
+          <Alert tone="danger">Sem o segundo fator, sua conta fica protegida apenas pela senha. Confirme a senha atual e um código do aplicativo. A sessão será encerrada.</Alert>
           {error && <Alert tone="danger">{error}</Alert>}
+          <div className="field"><Label htmlFor="disable-totp-password">Senha atual</Label><Input id="disable-totp-password" type="password" autoComplete="current-password" maxLength={256} value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} /></div>
           <div className="field"><Label htmlFor="disable-totp-code">Código do aplicativo</Label><Input id="disable-totp-code" inputMode="numeric" maxLength={6} autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ''))} autoFocus /></div>
-          <div className="confirm-row"><Button type="submit" disabled={!/^\d{6}$/.test(code) || loading}>{loading ? 'Desativando…' : 'Confirmar desativação'}</Button><Button type="button" variant="ghost" onClick={() => { setDisabling(false); setCode(''); setError(null); }}>Cancelar</Button></div>
+          <div className="confirm-row"><Button type="submit" disabled={!/^\d{6}$/.test(code) || !currentPassword || loading}>{loading ? 'Desativando…' : 'Confirmar desativação'}</Button><Button type="button" variant="ghost" onClick={() => { setDisabling(false); setCode(''); setCurrentPassword(''); setError(null); }}>Cancelar</Button></div>
         </form>
       )}
     </Card>
